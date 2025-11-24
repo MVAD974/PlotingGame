@@ -6,7 +6,7 @@ Contains all game settings, colors, layout constants, and allowed math functions
 
 import math
 from enum import Enum
-from typing import Final
+from typing import Final, Tuple
 
 # --- Window Configuration ---
 WIDTH: Final[int] = 900
@@ -177,3 +177,9 @@ WIN_ERROR_THRESHOLD: Final[float] = 0.05  # Default win threshold
 # --- Gameplay Constants ---
 HINT_DISPLAY_DURATION: Final[int] = 300  # frames (5 seconds at 60 FPS)
 Y_RANGE_MARGIN: Final[float] = 0.2  # Add 20% margin to y-range for plotting
+
+# --- Visual Effects Constants ---
+SCREEN_SHAKE_DURATION: Final[int] = 15  # frames
+SCREEN_SHAKE_INTENSITY: Final[int] = 8  # pixels
+FLASH_DURATION: Final[int] = 20  # frames
+FLASH_COLOR: Tuple[int, int, int, int] = (0, 255, 255, 100)  # Cyan with alpha
