@@ -425,7 +425,7 @@ class Renderer:
         self.screen.blit(self.scanline_surf, (0, H_SPLIT))
         self.screen.blit(self.vignette_surf, (0, H_SPLIT))
 
-    def _draw_grid_and_ticks(self, r, sim: 'Simulation'):
+    def _draw_grid_and_ticks(self, r: pyg.Rect, sim: 'Simulation') -> None:
         """Draw grid and axis labels."""
         steps_x = 10
         for i in range(steps_x + 1):
@@ -445,7 +445,14 @@ class Renderer:
             lbl = self.font_ui.render(f"{val:.1f}", True, C['TXT_DIM'])
             self.screen.blit(lbl, (r.x - lbl.get_width() - 8, y - 6))
 
-    def _draw_curve(self, pts, color, r, sim: 'Simulation', thick=False):
+    def _draw_curve(
+        self, 
+        pts: List[Tuple[float, float]], 
+        color: Tuple[int, int, int], 
+        r: pyg.Rect, 
+        sim: 'Simulation', 
+        thick: bool = False
+    ) -> None:
         """Draw a curve on the plot."""
         if len(pts) < 2:
             return
@@ -453,7 +460,7 @@ class Renderer:
         span_x = max(sim.x_range[1] - sim.x_range[0], 1e-6)
         span_y = max(sim.y_max - sim.y_min, 1e-6)
 
-        def map_pt(p):
+        def map_pt(p: Tuple[float, float]) -> Tuple[float, float]:
             xn = (p[0] - sim.x_range[0]) / span_x
             yn = (p[1] - sim.y_min) / span_y
             return (r.x + xn * r.w, r.bottom - yn * r.h)
@@ -469,7 +476,7 @@ class Renderer:
                 [(x, y + 1) for (x, y) in scr_pts],
             )
 
-    def _create_scanlines(self):
+    def _create_scanlines(self) -> pyg.Surface:
         """Create scanline overlay effect."""
         s = pyg.Surface((WIDTH, HEIGHT - H_SPLIT), pyg.SRCALPHA)
         for y in range(0, HEIGHT - H_SPLIT, 2):

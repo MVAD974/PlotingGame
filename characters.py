@@ -6,22 +6,31 @@ Contains functions to draw people with different poses and animations.
 
 import math
 import pygame as pyg
+from typing import Tuple
 from config import COLORS as C
 
 
-def draw_person(screen, x: int, y: int, hair_col: tuple, pose: str = "standing", 
-                facing_left: bool = False):
+def draw_person(
+    screen: pyg.Surface, 
+    x: int, 
+    y: int, 
+    hair_col: Tuple[int, int, int], 
+    pose: str = "standing", 
+    facing_left: bool = False
+) -> None:
     """
     Draw a vector person with various poses.
     
     Args:
         screen: Pygame screen surface
-        x, y: Position coordinates
+        x: X position coordinate
+        y: Y position coordinate
         hair_col: RGB tuple for hair color
-        pose: "standing", "sitting", "standing_coffee", "standing_point"
+        pose: Pose type - "standing", "sitting", "standing_coffee", "standing_point"
         facing_left: Whether the person faces left
     """
-    def flip(dx):
+    def flip(dx: int) -> int:
+        """Flip horizontal offset if facing left."""
         return -dx if facing_left else dx
 
     # Head
