@@ -7,13 +7,16 @@ Handles target function generation, safe evaluation, difficulty management, and 
 import math
 import random
 from typing import List, Tuple, Optional
-from config import ALLOWED_MATH, FUNCTION_TEMPLATES
+from config import (
+    ALLOWED_MATH, FUNCTION_TEMPLATES, DIFFICULTY_LEVELS, 
+    SKIP_PENALTY, INITIAL_HINTS, WIN_ERROR_THRESHOLD, Y_RANGE_MARGIN
+)
 
 
 class Simulation:
     """Handles target function generation, safe evaluation, difficulty management, and win checks."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # X range and sampling
         self.x_range: Tuple[float, float] = (0, 10)
         self.nb_points: int = 400
@@ -37,21 +40,14 @@ class Simulation:
         self.difficulty: str = 'easy'
         self.level: int = 1
         self.score: int = 0
-        self.hints_available: int = 3
+        self.hints_available: int = INITIAL_HINTS
 
         self.new_level()
 
-    def new_level(self):
+    def new_level(self) -> None:
         """Generate a new target function and reset state."""
         # Increase difficulty based on level
-        if self.level <= 3:
-            self.difficulty = 'easy'
-        elif self.level <= 6:
-            self.difficulty = 'medium'
-        elif self.level <= 10:
-            self.difficulty = 'hard'
-        else:
-            self.difficulty = 'expert'
+        self.difficulty = self._get_difficulty_for_level(self.level)
         
         templates = FUNCTION_TEMPLATES[self.difficulty]
         self.target_formula = random.choice(templates)()
@@ -64,6 +60,13 @@ class Simulation:
         # Debug / dev info – comment out if undesired:
         print(f"Level {self.level} ({self.difficulty}): {self.target_formula}")
 
+    def _get_difficulty_for_level(self, level: int) -> str:
+        """Determine difficulty level based on current level number."""
+        for difficulty, settings in DIFFICULTY_LEVELS.items():
+            if level <= settings['threshold']:
+                return difficulty
+        return 'expert'  # Fallback to expert for high levels
+
     def get_hint(self) -> Optional[str]:
         """Get a hint about the target function if hints are available."""
         if self.hints_available <= 0:
@@ -73,12 +76,18 @@ class Simulation:
         
         # Provide hints based on what's in the formula
         hints = []
-        if 'sin' in self.target_formula:
+        if 'sin' in self.target_formula and 'sinh' not in self.target_formula:
             hints.append("Uses sine function")
-        if 'cos' in self.target_formula:
+        if 'cos' in self.target_formula and 'cosh' not in self.target_formula:
             hints.append("Uses cosine function")
-        if 'tan' in self.target_formula:
+        if 'tan' in self.target_formula and 'tanh' not in self.target_formula:
             hints.append("Uses tangent function")
+        if 'sinh' in self.target_formula:
+            hints.append("Uses hyperbolic sine")
+        if 'cosh' in self.target_formula:
+            hints.append("Uses hyperbolic cosine")
+        if 'tanh' in self.target_formula:
+            hints.append("Uses hyperbolic tangent")
         if 'sqrt' in self.target_formula:
             hints.append("Uses square root")
         if 'log' in self.target_formula:
@@ -146,7 +155,7 @@ class Simulation:
 
         return pts, valid, float(mn), float(mx)
 
-    def _calc_target(self):
+    def _calc_target(self) -> None:
         """Compute target points and adjust plotting y-range."""
         pts, valid, mn, mx = self._calc_points(self.target_formula)
         if not valid:
@@ -154,10 +163,10 @@ class Simulation:
 
         self.target_pts = pts
         span = mx - mn or 1.0
-        self.y_min = mn - span * 0.2
-        self.y_max = mx + span * 0.2
+        self.y_min = mn - span * Y_RANGE_MARGIN
+        self.y_max = mx + span * Y_RANGE_MARGIN
 
-    def update_player(self, text: str):
+    def update_player(self, text: str) -> None:
         """Update player expression, recompute points, and check win."""
         self.text_input = text
         pts, valid, _, _ = self._calc_points(self.text_input)
@@ -171,7 +180,7 @@ class Simulation:
             self.is_win = False
             self.current_error = None
 
-    def _check_win(self):
+    def _check_win(self) -> None:
         """Compute normalized average error and set win state."""
         if not self.target_pts or not self.player_pts:
             self.is_win = False
@@ -197,16 +206,17 @@ class Simulation:
         avg_err = total_err / n
         self.current_error = avg_err
 
-        # Win threshold: tweak as desired
-        self.is_win = avg_err < 0.05
+        # Get error threshold for current difficulty
+        error_threshold = DIFFICULTY_LEVELS.get(self.difficulty, {}).get('error_tolerance', WIN_ERROR_THRESHOLD)
+        self.is_win = avg_err < error_threshold
         
         if self.is_win:
             # Award points based on difficulty
-            points = {'easy': 100, 'medium': 200, 'hard': 300, 'expert': 500}
-            self.score += points.get(self.difficulty, 100)
+            points = DIFFICULTY_LEVELS.get(self.difficulty, {}).get('points', 100)
+            self.score += points
             self.level += 1
 
-    def skip_level(self):
+    def skip_level(self) -> None:
         """Skip current level (penalty to score)."""
-        self.score = max(0, self.score - 50)
+        self.score = max(0, self.score - SKIP_PENALTY)
         self.new_level()
