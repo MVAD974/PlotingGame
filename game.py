@@ -5,7 +5,7 @@ Handles game states, input processing, updates, and rendering coordination.
 """
 
 import pygame as pyg
-from typing import Optional
+from typing import Optional, Tuple
 import random
 from config import (
     WIDTH, HEIGHT, FPS, GameState, HINT_DISPLAY_DURATION,
@@ -42,7 +42,7 @@ class Game:
         # Visual effects
         self.screen_shake_timer: int = 0
         self.flash_timer: int = 0
-        self.shake_offset: tuple[int, int] = (0, 0)
+        self.shake_offset: Tuple[int, int] = (0, 0)
 
     def run(self) -> None:
         """Main game loop."""
@@ -103,10 +103,11 @@ class Game:
             self.sim.update_player(self.sim.text_input[:-1])
         elif event.key == pyg.K_RETURN:
             if self.sim.is_win:
-                # Trigger visual effects for level completion
-                self._trigger_level_complete_effects()
+                # Start new level first
                 self.sim.new_level()
                 self.hint_message = None
+                # Then trigger visual effects for the completion
+                self._trigger_level_complete_effects()
         elif event.key == pyg.K_TAB:
             self.sim.skip_level()
             self.hint_message = None

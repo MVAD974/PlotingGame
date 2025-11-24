@@ -497,7 +497,7 @@ class Renderer:
         self.screen.fill((10, 15, 20))
         
         # Title
-        title = self.font_title.render("PLOTING GAME", True, C['PLOT_TARG'])
+        title = self.font_title.render("PLOTTING GAME", True, C['PLOT_TARG'])
         title_rect = title.get_rect(center=(WIDTH // 2, 150))
         self.screen.blit(title, title_rect)
         
