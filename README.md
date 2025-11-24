@@ -7,14 +7,28 @@ A Python-based game where you match mathematical functions by typing expressions
 
 ## 🎮 How to Play
 
-1. **Objective**: Match the target function (cyan curve) by typing a mathematical expression
-2. **Type** your function using the keyboard (e.g., `sin(x)`, `x**2`, etc.)
-3. **Press ENTER** to advance to the next level when you match the function
-4. **Press TAB** to skip a level (with a score penalty)
-5. **Press H** to get a hint about the target function (limited hints available)
-6. **Press BACKSPACE** to edit your input
+1. **Start the Game**: Run the game and navigate the menu with arrow keys
+2. **Objective**: Match the target function (cyan curve) by typing a mathematical expression
+3. **Type** your function using the keyboard (e.g., `sin(x)`, `x**2`, etc.)
+4. **Your Function** (orange curve) updates in real-time as you type!
 
-Your function (orange curve) will update in real-time as you type!
+### Controls
+
+**Menu Navigation:**
+- `UP/DOWN` - Navigate menu options
+- `ENTER` - Select option
+
+**During Gameplay:**
+- Type your mathematical expression directly
+- `ENTER` - Advance to next level when matched
+- `TAB` - Skip current level (50 point penalty)
+- `H` - Get a hint (3 hints available per game)
+- `BACKSPACE` - Delete last character
+- `ESC` - Pause game
+
+**Paused:**
+- `ESC` or `P` - Resume game
+- `Q` - Return to main menu
 
 ## 📦 Installation
 

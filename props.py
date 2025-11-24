@@ -6,10 +6,11 @@ Contains functions to draw desks, monitors, laptops, plants, and other scenery o
 
 import random
 import pygame as pyg
+from typing import List, Tuple
 from config import COLORS as C, WIDTH, H_SPLIT
 
 
-def draw_desk(screen, x: int, y: int, w: int):
+def draw_desk(screen: pyg.Surface, x: int, y: int, w: int) -> None:
     """Draw a vector desk."""
     pyg.draw.polygon(
         screen,
@@ -21,7 +22,7 @@ def draw_desk(screen, x: int, y: int, w: int):
     pyg.draw.rect(screen, (40, 40, 40), (x + w - 30, y + 45, 10, 60))
 
 
-def draw_laptop(screen, x: int, y: int):
+def draw_laptop(screen: pyg.Surface, x: int, y: int) -> None:
     """Draw a vector laptop with animated screen."""
     pyg.draw.polygon(
         screen,
@@ -50,7 +51,7 @@ def draw_laptop(screen, x: int, y: int):
     )
 
 
-def draw_mug(screen, x: int, y: int):
+def draw_mug(screen: pyg.Surface, x: int, y: int) -> None:
     """Draw a coffee mug with steam animation."""
     pyg.draw.rect(screen, (200, 200, 200), (x - 3, y, 6, 8))
     # Animated steam
@@ -64,7 +65,7 @@ def draw_mug(screen, x: int, y: int):
         )
 
 
-def draw_plant(screen, x: int, y: int, size: int = 20):
+def draw_plant(screen: pyg.Surface, x: int, y: int, size: int = 20) -> None:
     """Draw a potted plant."""
     # Pot
     pot_width = size // 2
@@ -94,7 +95,7 @@ def draw_plant(screen, x: int, y: int, size: int = 20):
                        (stem_x + 5, y - stem_height + 3), 5)
 
 
-def draw_coffee_machine(screen, x: int, y: int):
+def draw_coffee_machine(screen: pyg.Surface, x: int, y: int) -> None:
     """Draw a coffee machine."""
     # Main body
     pyg.draw.rect(screen, (80, 80, 90), (x, y, 40, 50), border_radius=3)
@@ -108,7 +109,7 @@ def draw_coffee_machine(screen, x: int, y: int):
     pyg.draw.rect(screen, (60, 40, 30), (x + 15, y + 45, 10, 5))
 
 
-def draw_clock(screen, x: int, y: int, time_seconds: int):
+def draw_clock(screen: pyg.Surface, x: int, y: int, time_seconds: int) -> None:
     """Draw a clock showing game time."""
     radius = 15
     # Clock face
@@ -121,7 +122,6 @@ def draw_clock(screen, x: int, y: int, time_seconds: int):
     
     # Hour hand
     hour_angle = (hours + minutes / 60) * 30 - 90  # 30 degrees per hour
-    hour_rad = hour_angle * 3.14159 / 180
     hour_len = radius * 0.5
     hour_x = x + hour_len * pyg.math.Vector2(1, 0).rotate(hour_angle).x
     hour_y = y + hour_len * pyg.math.Vector2(1, 0).rotate(hour_angle).y
@@ -138,10 +138,10 @@ def draw_clock(screen, x: int, y: int, time_seconds: int):
     pyg.draw.circle(screen, (255, 0, 0), (x, y), 3)
 
 
-def draw_light_cone(screen, x: int, y: int, w: int, h: int):
+def draw_light_cone(screen: pyg.Surface, x: int, y: int, w: int, h: int) -> None:
     """Draw a light cone effect."""
     s = pyg.Surface((WIDTH, H_SPLIT), pyg.SRCALPHA)
-    pts = [(x, y), (x - w // 2, y + h), (x + w // 2, y + h)]
+    pts: List[Tuple[int, int]] = [(x, y), (x - w // 2, y + h), (x + w // 2, y + h)]
     pyg.draw.polygon(s, (255, 255, 200, 10), pts)
     screen.blit(s, (0, 0))
 
@@ -149,7 +149,7 @@ def draw_light_cone(screen, x: int, y: int, w: int, h: int):
 class Particle:
     """Floating particle for ambient effects."""
     
-    def __init__(self, x: float, y: float):
+    def __init__(self, x: float, y: float) -> None:
         self.x = x
         self.y = y
         self.speed_y = random.uniform(-0.3, -0.1)
@@ -158,14 +158,14 @@ class Particle:
         self.age = 0
         self.size = random.randint(1, 2)
         
-    def update(self):
-        """Update particle position and age."""
+    def update(self) -> bool:
+        """Update particle position and age. Returns True if particle is still alive."""
         self.x += self.speed_x
         self.y += self.speed_y
         self.age += 1
         return self.age < self.lifetime
         
-    def draw(self, screen):
+    def draw(self, screen: pyg.Surface) -> None:
         """Draw the particle with fading effect."""
         alpha = int(255 * (1 - self.age / self.lifetime))
         color = (*C['PARTICLE_GLOW'], alpha)
@@ -177,11 +177,11 @@ class Particle:
 class ParticleSystem:
     """Manages multiple particles for ambient effects."""
     
-    def __init__(self):
-        self.particles = []
+    def __init__(self) -> None:
+        self.particles: List[Particle] = []
         self.spawn_timer = 0
         
-    def update(self, spawn_x_range: tuple, spawn_y_range: tuple):
+    def update(self, spawn_x_range: Tuple[int, int], spawn_y_range: Tuple[int, int]) -> None:
         """Update all particles and spawn new ones."""
         # Update existing particles
         self.particles = [p for p in self.particles if p.update()]
@@ -194,7 +194,7 @@ class ParticleSystem:
             y = random.uniform(spawn_y_range[0], spawn_y_range[1])
             self.particles.append(Particle(x, y))
             
-    def draw(self, screen):
+    def draw(self, screen: pyg.Surface) -> None:
         """Draw all particles."""
         for particle in self.particles:
             particle.draw(screen)

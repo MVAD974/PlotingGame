@@ -6,7 +6,7 @@ Handles all drawing and UI rendering with enhanced scenery and effects.
 
 import random
 import pygame as pyg
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Tuple
 
 from config import (
     WIDTH, HEIGHT, H_SPLIT, COLORS as C, 
@@ -29,13 +29,15 @@ if TYPE_CHECKING:
 class Renderer:
     """Responsible for all drawing and UI rendering."""
 
-    def __init__(self, screen):
+    def __init__(self, screen: pyg.Surface) -> None:
         self.screen = screen
 
         # Fonts
         self.font_term = pyg.font.SysFont("Consolas", 16)
         self.font_term_big = pyg.font.SysFont("Consolas", 22, bold=True)
         self.font_ui = pyg.font.SysFont("Arial", 10)
+        self.font_menu = pyg.font.SysFont("Arial", 24, bold=True)
+        self.font_title = pyg.font.SysFont("Arial", 48, bold=True)
 
         # Main regions
         self.rect_lab = pyg.Rect(0, 0, WIDTH, H_SPLIT)
@@ -423,7 +425,7 @@ class Renderer:
         self.screen.blit(self.scanline_surf, (0, H_SPLIT))
         self.screen.blit(self.vignette_surf, (0, H_SPLIT))
 
-    def _draw_grid_and_ticks(self, r, sim: 'Simulation'):
+    def _draw_grid_and_ticks(self, r: pyg.Rect, sim: 'Simulation') -> None:
         """Draw grid and axis labels."""
         steps_x = 10
         for i in range(steps_x + 1):
@@ -443,7 +445,14 @@ class Renderer:
             lbl = self.font_ui.render(f"{val:.1f}", True, C['TXT_DIM'])
             self.screen.blit(lbl, (r.x - lbl.get_width() - 8, y - 6))
 
-    def _draw_curve(self, pts, color, r, sim: 'Simulation', thick=False):
+    def _draw_curve(
+        self, 
+        pts: List[Tuple[float, float]], 
+        color: Tuple[int, int, int], 
+        r: pyg.Rect, 
+        sim: 'Simulation', 
+        thick: bool = False
+    ) -> None:
         """Draw a curve on the plot."""
         if len(pts) < 2:
             return
@@ -451,7 +460,7 @@ class Renderer:
         span_x = max(sim.x_range[1] - sim.x_range[0], 1e-6)
         span_y = max(sim.y_max - sim.y_min, 1e-6)
 
-        def map_pt(p):
+        def map_pt(p: Tuple[float, float]) -> Tuple[float, float]:
             xn = (p[0] - sim.x_range[0]) / span_x
             yn = (p[1] - sim.y_min) / span_y
             return (r.x + xn * r.w, r.bottom - yn * r.h)
@@ -467,16 +476,155 @@ class Renderer:
                 [(x, y + 1) for (x, y) in scr_pts],
             )
 
-    def _create_scanlines(self):
+    def _create_scanlines(self) -> pyg.Surface:
         """Create scanline overlay effect."""
         s = pyg.Surface((WIDTH, HEIGHT - H_SPLIT), pyg.SRCALPHA)
         for y in range(0, HEIGHT - H_SPLIT, 2):
             pyg.draw.line(s, (0, 0, 0, 100), (0, y), (WIDTH, y))
         return s
 
-    def _create_vignette(self):
+    def _create_vignette(self) -> pyg.Surface:
         """Create vignette overlay effect."""
         s = pyg.Surface((WIDTH, HEIGHT - H_SPLIT), pyg.SRCALPHA)
         w, h = s.get_size()
         pyg.draw.rect(s, (0, 0, 0, 50), (0, 0, w, h), 20)
         return s
+    
+    # --- Menu and UI Screens ---
+    
+    def draw_menu(self, selection: int) -> None:
+        """Draw the main menu screen."""
+        self.screen.fill((10, 15, 20))
+        
+        # Title
+        title = self.font_title.render("PLOTTING GAME", True, C['PLOT_TARG'])
+        title_rect = title.get_rect(center=(WIDTH // 2, 150))
+        self.screen.blit(title, title_rect)
+        
+        # Subtitle
+        subtitle = self.font_menu.render("Science Lab: Function Matching Challenge", True, C['TXT_DIM'])
+        subtitle_rect = subtitle.get_rect(center=(WIDTH // 2, 200))
+        self.screen.blit(subtitle, subtitle_rect)
+        
+        # Menu options
+        options = ["Play", "Instructions", "Quit"]
+        start_y = 300
+        spacing = 60
+        
+        for i, option in enumerate(options):
+            color = C['PLOT_USER'] if i == selection else C['TXT_MAIN']
+            prefix = "> " if i == selection else "  "
+            text = self.font_menu.render(f"{prefix}{option}", True, color)
+            text_rect = text.get_rect(center=(WIDTH // 2, start_y + i * spacing))
+            self.screen.blit(text, text_rect)
+        
+        # Controls hint
+        hint = self.font_ui.render("Use UP/DOWN arrows to navigate, ENTER to select", True, C['TXT_DIM'])
+        hint_rect = hint.get_rect(center=(WIDTH // 2, HEIGHT - 50))
+        self.screen.blit(hint, hint_rect)
+    
+    def draw_instructions(self) -> None:
+        """Draw the instructions screen."""
+        self.screen.fill((10, 15, 20))
+        
+        # Title
+        title = self.font_title.render("HOW TO PLAY", True, C['PLOT_TARG'])
+        title_rect = title.get_rect(center=(WIDTH // 2, 80))
+        self.screen.blit(title, title_rect)
+        
+        # Instructions
+        instructions = [
+            "OBJECTIVE:",
+            "  Match the target function (cyan curve) by typing a mathematical expression.",
+            "",
+            "CONTROLS:",
+            "  Type your function using the keyboard (e.g., sin(x), x**2, etc.)",
+            "  ENTER - Advance to next level when matched",
+            "  TAB - Skip current level (score penalty)",
+            "  H - Get a hint (limited hints available)",
+            "  BACKSPACE - Delete character",
+            "  ESC - Pause game",
+            "",
+            "AVAILABLE FUNCTIONS:",
+            "  Trigonometric: sin, cos, tan, asin, acos, atan",
+            "  Hyperbolic: sinh, cosh, tanh",
+            "  Exponential: exp, log, log10, sqrt",
+            "  Other: abs, floor, ceil, round, pow",
+            "  Constants: pi, e",
+            "",
+            "DIFFICULTY:",
+            "  The game gets progressively harder with more complex functions.",
+            "  Easy (Levels 1-3) → Medium (4-6) → Hard (7-10) → Expert (11+)",
+        ]
+        
+        start_y = 140
+        line_height = 22
+        
+        for i, line in enumerate(instructions):
+            if line.endswith(":"):
+                color = C['PLOT_USER']
+                font = pyg.font.SysFont("Arial", 12, bold=True)
+            elif line.startswith("  "):
+                color = C['TXT_MAIN']
+                font = pyg.font.SysFont("Arial", 10)
+            else:
+                color = C['TXT_DIM']
+                font = pyg.font.SysFont("Arial", 10)
+            
+            text = font.render(line, True, color)
+            self.screen.blit(text, (100, start_y + i * line_height))
+        
+        # Back hint
+        hint = self.font_menu.render("Press ESC or ENTER to return", True, C['TXT_DIM'])
+        hint_rect = hint.get_rect(center=(WIDTH // 2, HEIGHT - 40))
+        self.screen.blit(hint, hint_rect)
+    
+    def draw_pause_overlay(self) -> None:
+        """Draw pause overlay on top of game screen."""
+        # Semi-transparent overlay
+        overlay = pyg.Surface((WIDTH, HEIGHT), pyg.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        self.screen.blit(overlay, (0, 0))
+        
+        # Pause text
+        title = self.font_title.render("PAUSED", True, C['PLOT_TARG'])
+        title_rect = title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 60))
+        self.screen.blit(title, title_rect)
+        
+        # Options
+        options = [
+            "ESC or P - Resume",
+            "Q - Return to Menu",
+        ]
+        
+        start_y = HEIGHT // 2 + 20
+        for i, option in enumerate(options):
+            text = self.font_menu.render(option, True, C['TXT_MAIN'])
+            text_rect = text.get_rect(center=(WIDTH // 2, start_y + i * 40))
+            self.screen.blit(text, text_rect)
+    
+    def draw_game_over(self, score: int, level: int) -> None:
+        """Draw game over screen."""
+        self.screen.fill((10, 15, 20))
+        
+        # Title
+        title = self.font_title.render("GAME OVER", True, C['TXT_ERR'])
+        title_rect = title.get_rect(center=(WIDTH // 2, 150))
+        self.screen.blit(title, title_rect)
+        
+        # Stats
+        stats = [
+            f"Final Score: {score}",
+            f"Level Reached: {level}",
+        ]
+        
+        start_y = 280
+        for i, stat in enumerate(stats):
+            text = self.font_menu.render(stat, True, C['PLOT_USER'])
+            text_rect = text.get_rect(center=(WIDTH // 2, start_y + i * 50))
+            self.screen.blit(text, text_rect)
+        
+        # Continue hint
+        hint = self.font_menu.render("Press ENTER to return to menu", True, C['TXT_DIM'])
+        hint_rect = hint.get_rect(center=(WIDTH // 2, HEIGHT - 100))
+        self.screen.blit(hint, hint_rect)

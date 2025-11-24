@@ -5,11 +5,24 @@ Contains all game settings, colors, layout constants, and allowed math functions
 """
 
 import math
+from enum import Enum
+from typing import Final, Tuple
 
 # --- Window Configuration ---
-WIDTH, HEIGHT = 900, 700
-FPS = 60
-H_SPLIT = 400  # Vertical split between lab (top) and terminal (bottom)
+WIDTH: Final[int] = 900
+HEIGHT: Final[int] = 700
+FPS: Final[int] = 60
+H_SPLIT: Final[int] = 400  # Vertical split between lab (top) and terminal (bottom)
+
+
+# --- Game States ---
+class GameState(Enum):
+    """Enumeration of possible game states."""
+    MENU = "menu"
+    PLAYING = "playing"
+    PAUSED = "paused"
+    GAME_OVER = "game_over"
+    INSTRUCTIONS = "instructions"
 
 # --- Layout Constants ---
 WINDOW_RECT_COORDS = (200, 40, 500, 140)
@@ -145,3 +158,28 @@ FUNCTION_TEMPLATES = {
         lambda: "cosh(x / 3) - 2",
     ],
 }
+
+
+# --- Difficulty Settings ---
+DIFFICULTY_LEVELS = {
+    'easy': {'threshold': 3, 'points': 100, 'error_tolerance': 0.05},
+    'medium': {'threshold': 6, 'points': 200, 'error_tolerance': 0.04},
+    'hard': {'threshold': 10, 'points': 300, 'error_tolerance': 0.03},
+    'expert': {'threshold': float('inf'), 'points': 500, 'error_tolerance': 0.02},
+}
+
+# --- Scoring Constants ---
+SKIP_PENALTY: Final[int] = 50
+HINT_COST: Final[int] = 0  # No score penalty for hints
+INITIAL_HINTS: Final[int] = 3
+WIN_ERROR_THRESHOLD: Final[float] = 0.05  # Default win threshold
+
+# --- Gameplay Constants ---
+HINT_DISPLAY_DURATION: Final[int] = 300  # frames (5 seconds at 60 FPS)
+Y_RANGE_MARGIN: Final[float] = 0.2  # Add 20% margin to y-range for plotting
+
+# --- Visual Effects Constants ---
+SCREEN_SHAKE_DURATION: Final[int] = 15  # frames
+SCREEN_SHAKE_INTENSITY: Final[int] = 8  # pixels
+FLASH_DURATION: Final[int] = 20  # frames
+FLASH_COLOR: Tuple[int, int, int, int] = (0, 255, 255, 100)  # Cyan with alpha
