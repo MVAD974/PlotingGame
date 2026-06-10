@@ -1,0 +1,628 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% CAPES de Mathématiques — Leçon : Calcul approché d'intégrales
+%% Document de révision — Préparation à l'oral
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[a4paper,12pt]{article}
+
+%% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\geometry{margin=2.5cm}
+\pgfplotsset{compat=1.18}
+
+%% --- Environnements théorèmes ---
+\theoremstyle{definition}
+\newtheorem{definition}{Définition}[section]
+\newtheorem{exemple}{Exemple}[section]
+\newtheorem{exercice}{Exercice}[section]
+
+\theoremstyle{plain}
+\newtheorem{theoreme}{Théorème}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{corollaire}{Corollaire}[section]
+\newtheorem{lemme}{Lemme}[section]
+
+\theoremstyle{remark}
+\newtheorem{remarque}{Remarque}[section]
+
+%% --- Commandes personnalisées ---
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\abs}[1]{\left|#1\right|}
+\newcommand{\norme}[1]{\left\|#1\right\|_\infty}
+
+%% --- Configuration listings Python ---
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{red},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  frame=single,
+  breaklines=true,
+  captionpos=b
+}
+
+%% --- Titre ---
+\title{%
+  \textbf{Calcul approché d'intégrales}\\[0.5em]
+  \large Leçon pour l'oral du CAPES de Mathématiques
+}
+\author{Document de révision}
+\date{Année 2025--2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{tcolorbox}[colback=blue!5!white, colframe=blue!50!black, title=Contexte de la leçon]
+\textbf{Niveau ciblé :} Terminale spécialité mathématiques / CPGE première année.\\
+\textbf{Prérequis :} Intégrale de Riemann, continuité, dérivabilité, formule de Taylor.\\
+\textbf{Durée de l'exposé :} $\sim$40 minutes (oral du CAPES).\\
+\textbf{Objectif :} Présenter les principales méthodes d'approximation numérique d'intégrales définies, avec démonstrations des estimations d'erreur et applications concrètes.
+\end{tcolorbox}
+
+\tableofcontents
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction et motivation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Pourquoi approcher une intégrale ?}
+
+Le calcul explicite de $\displaystyle\int_a^b f(x)\,dx$ nécessite de déterminer une primitive de~$f$. Or, dans de nombreuses situations concrètes, cette primitive n'est pas exprimable à l'aide de fonctions élémentaires.
+
+\begin{exemple}
+Les intégrales suivantes ne possèdent pas de primitive en termes de fonctions élémentaires :
+\begin{enumerate}[label=(\roman*)]
+  \item $\displaystyle\int_0^1 e^{-x^2}\,dx$ \quad (liée à la fonction d'erreur $\operatorname{erf}$, fondamentale en probabilités),
+  \item $\displaystyle\int_0^1 \frac{\sin x}{x}\,dx$ \quad (intégrale sinus),
+  \item $\displaystyle\int_0^{\pi} \sqrt{1+\cos^2 x}\,dx$ \quad (longueur d'arc d'une ellipse).
+\end{enumerate}
+\end{exemple}
+
+Il est donc indispensable de disposer de \textbf{méthodes numériques} permettant d'obtenir des valeurs approchées de ces intégrales, avec un \textbf{contrôle de l'erreur} commise.
+
+\subsection{Cadre général}
+
+\begin{definition}[Cadre de travail]
+Soit $f : [a,b] \to \R$ une fonction continue. On note
+\[
+  I(f) = \int_a^b f(x)\,dx.
+\]
+On introduit une \textbf{subdivision régulière} de $[a,b]$ :
+\[
+  h = \frac{b-a}{n}, \qquad x_k = a + kh \quad \text{pour } k = 0, 1, \ldots, n.
+\]
+Le but est de construire des approximations $I_n$ de $I(f)$ telles que $I_n \to I(f)$ quand $n \to +\infty$, et d'estimer la vitesse de convergence $|I(f) - I_n|$.
+\end{definition}
+
+\subsection{Idée géométrique unificatrice}
+
+Toutes les méthodes classiques reposent sur le même principe :
+\begin{enumerate}
+  \item Sur chaque sous-intervalle $[x_k, x_{k+1}]$, on \textbf{remplace} $f$ par une fonction simple $p_k$ (constante, affine, polynôme de degré~2\ldots).
+  \item On calcule \textbf{exactement} $\int_{x_k}^{x_{k+1}} p_k(x)\,dx$.
+  \item On \textbf{somme} sur tous les sous-intervalles.
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Méthode des rectangles}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Formules}
+
+\begin{definition}[Sommes de Riemann]
+On définit les approximations suivantes :
+\begin{align}
+  R_n^g &= h \sum_{k=0}^{n-1} f(x_k) & &\text{(rectangles à gauche)}, \label{eq:rect_gauche}\\[6pt]
+  R_n^d &= h \sum_{k=1}^{n} f(x_k) & &\text{(rectangles à droite)}, \label{eq:rect_droite}\\[6pt]
+  M_n &= h \sum_{k=0}^{n-1} f\!\left(\frac{x_k + x_{k+1}}{2}\right) & &\text{(méthode du point milieu)}. \label{eq:point_milieu}
+\end{align}
+\end{definition}
+
+\begin{remarque}
+\begin{itemize}
+  \item $R_n^g$ et $R_n^d$ sont des \textbf{sommes de Riemann} classiques.
+  \item $M_n$ évalue $f$ au \textbf{milieu} de chaque sous-intervalle.
+  \item Si $f$ est monotone sur $[a,b]$, alors $R_n^g$ et $R_n^d$ encadrent $I(f)$.
+\end{itemize}
+\end{remarque}
+
+\subsection{Convergence}
+
+\begin{theoreme}[Convergence des sommes de Riemann]
+Pour toute fonction $f$ continue sur $[a,b]$ :
+\[
+  \lim_{n\to+\infty} R_n^g = \lim_{n\to+\infty} R_n^d = \lim_{n\to+\infty} M_n = I(f).
+\]
+\end{theoreme}
+
+\begin{proof}
+C'est une conséquence directe de la définition de l'intégrale de Riemann : toute suite de sommes de Riemann associée à une suite de subdivisions dont le pas tend vers 0 converge vers $\int_a^b f(x)\,dx$ lorsque $f$ est continue (donc Riemann-intégrable) sur $[a,b]$.
+\end{proof}
+
+\subsection{Estimation de l'erreur --- Rectangles à gauche/droite}
+
+\begin{theoreme}[Erreur des rectangles]\label{thm:erreur_rectangles}
+Si $f \in \mathcal{C}^1([a,b])$, alors :
+\[
+  \abs{I(f) - R_n^g} \leq \frac{(b-a)^2}{2n}\,\norme{f'} = O\!\left(\frac{1}{n}\right).
+\]
+La même estimation vaut pour $R_n^d$.
+\end{theoreme}
+
+\begin{proof}
+Sur chaque sous-intervalle $[x_k, x_{k+1}]$, on écrit, pour $t \in [x_k, x_{k+1}]$ :
+\[
+  f(t) = f(x_k) + \int_{x_k}^t f'(s)\,ds.
+\]
+D'où :
+\[
+  \int_{x_k}^{x_{k+1}} f(t)\,dt - h\,f(x_k) = \int_{x_k}^{x_{k+1}} \int_{x_k}^t f'(s)\,ds\,dt.
+\]
+En majorant :
+\[
+  \abs{\int_{x_k}^{x_{k+1}} f(t)\,dt - h\,f(x_k)} \leq \norme{f'} \int_{x_k}^{x_{k+1}} (t - x_k)\,dt = \norme{f'}\,\frac{h^2}{2}.
+\]
+En sommant sur $k = 0, \ldots, n-1$ :
+\[
+  \abs{I(f) - R_n^g} \leq n \cdot \norme{f'}\,\frac{h^2}{2} = \frac{(b-a)^2}{2n}\,\norme{f'}.
+\]
+\end{proof}
+
+\subsection{Estimation de l'erreur --- Point milieu}
+
+\begin{theoreme}[Erreur du point milieu]\label{thm:erreur_milieu}
+Si $f \in \mathcal{C}^2([a,b])$, alors :
+\[
+  \abs{I(f) - M_n} \leq \frac{(b-a)^3}{24n^2}\,\norme{f''} = O\!\left(\frac{1}{n^2}\right).
+\]
+\end{theoreme}
+
+\begin{proof}
+Posons $c_k = \frac{x_k + x_{k+1}}{2}$ le milieu de $[x_k, x_{k+1}]$. Par la formule de Taylor à l'ordre~2 avec reste intégral, pour $t \in [x_k, x_{k+1}]$ :
+\[
+  f(t) = f(c_k) + f'(c_k)(t - c_k) + \int_{c_k}^t (t-s)\,f''(s)\,ds.
+\]
+En intégrant sur $[x_k, x_{k+1}]$ :
+\[
+  \int_{x_k}^{x_{k+1}} f(t)\,dt = h\,f(c_k) + f'(c_k)\underbrace{\int_{x_k}^{x_{k+1}}(t-c_k)\,dt}_{=\,0} + \int_{x_k}^{x_{k+1}} \int_{c_k}^t (t-s)\,f''(s)\,ds\,dt.
+\]
+L'intégrale $\int_{x_k}^{x_{k+1}}(t-c_k)\,dt = 0$ par symétrie autour de $c_k$. Pour le reste :
+\[
+  \abs{\int_{x_k}^{x_{k+1}} \int_{c_k}^t (t-s)\,f''(s)\,ds\,dt} \leq \norme{f''} \int_{x_k}^{x_{k+1}} \frac{(t-c_k)^2}{2}\,dt = \norme{f''}\,\frac{h^3}{24}.
+\]
+En sommant sur les $n$ sous-intervalles :
+\[
+  \abs{I(f) - M_n} \leq n \cdot \norme{f''}\,\frac{h^3}{24} = \frac{(b-a)^3}{24n^2}\,\norme{f''}.
+\]
+\end{proof}
+
+\begin{remarque}[Point important pour le jury]
+Le point milieu est d'ordre~2, comme les trapèzes, mais avec une constante \textbf{deux fois plus petite}. Cette supériorité inattendue s'explique par la symétrie : le terme d'ordre~1 dans Taylor s'annule par parité lors de l'intégration autour du point milieu.
+\end{remarque}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Méthode des trapèzes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Formule}
+
+\begin{definition}[Formule composée des trapèzes]
+\[
+  T_n = h\left(\frac{f(a) + f(b)}{2} + \sum_{k=1}^{n-1} f(x_k)\right).
+\]
+\end{definition}
+
+\begin{proposition}[Relation avec les rectangles]
+\[
+  T_n = \frac{R_n^g + R_n^d}{2}.
+\]
+\end{proposition}
+
+\begin{proof}
+Calcul direct :
+\[
+  \frac{R_n^g + R_n^d}{2} = \frac{h}{2}\left(\sum_{k=0}^{n-1}f(x_k) + \sum_{k=1}^n f(x_k)\right) = h\left(\frac{f(x_0)+f(x_n)}{2} + \sum_{k=1}^{n-1}f(x_k)\right) = T_n.
+\]
+\end{proof}
+
+\subsection{Interprétation géométrique}
+
+Sur chaque sous-intervalle $[x_k, x_{k+1}]$, on approche $f$ par la \textbf{fonction affine} joignant les points $(x_k, f(x_k))$ et $(x_{k+1}, f(x_{k+1}))$. L'aire sous ce segment est celle d'un trapèze :
+\[
+  \frac{h}{2}\big(f(x_k) + f(x_{k+1})\big).
+\]
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{axis}[
+    width=10cm, height=6cm,
+    axis lines=middle,
+    xlabel={$x$}, ylabel={$y$},
+    xmin=0, xmax=3.5,
+    ymin=0, ymax=3,
+    xtick={0.5, 1.5, 2.5, 3.5},
+    xticklabels={$x_0$, $x_1$, $x_2$, $x_3$},
+    ytick=\empty,
+    domain=0.5:3.5,
+    samples=100
+  ]
+    % Courbe
+    \addplot[thick, blue] {0.3*(x-1)^2 + 1};
+    
+    % Trapèzes (remplissage)
+    \addplot[fill=blue!15, draw=none] coordinates {
+      (0.5, 0) (0.5, 1.075) (1.5, 1.075) (1.5, 0)} \closedcycle;
+    \addplot[fill=blue!15, draw=none] coordinates {
+      (1.5, 0) (1.5, 1.075) (2.5, 1.675) (2.5, 0)} \closedcycle;
+    \addplot[fill=blue!15, draw=none] coordinates {
+      (2.5, 0) (2.5, 1.675) (3.5, 2.575) (3.5, 0)} \closedcycle;
+    
+    % Segments supérieurs des trapèzes
+    \addplot[thick, red, dashed] coordinates {(0.5, 1.075) (1.5, 1.075)};
+    \addplot[thick, red, dashed] coordinates {(1.5, 1.075) (2.5, 1.675)};
+    \addplot[thick, red, dashed] coordinates {(2.5, 1.675) (3.5, 2.575)};
+    
+    \node at (axis cs:2, 2.7) {\color{blue} $y = f(x)$};
+  \end{axis}
+\end{tikzpicture}
+\end{center}
+
+\subsection{Estimation de l'erreur}
+
+\begin{theoreme}[Erreur des trapèzes]\label{thm:erreur_trapezes}
+Si $f \in \mathcal{C}^2([a,b])$, alors :
+\[
+  \abs{I(f) - T_n} \leq \frac{(b-a)^3}{12n^2}\,\norme{f''} = O\!\left(\frac{1}{n^2}\right).
+\]
+\end{theoreme}
+
+\begin{proof}
+Sur $[x_k, x_{k+1}]$, effectuons le changement de variable $t = x_k + uh$ avec $u \in [0,1]$. Posons $g(u) = f(x_k + uh)$. L'erreur locale des trapèzes sur $[x_k, x_{k+1}]$ vaut :
+\[
+  e_k = \int_{x_k}^{x_{k+1}} f(t)\,dt - \frac{h}{2}\big(f(x_k) + f(x_{k+1})\big) = h\left[\int_0^1 g(u)\,du - \frac{g(0)+g(1)}{2}\right].
+\]
+Par intégration par parties (avec $\varphi(u) = \frac{u(u-1)}{2}$, qui vérifie $\varphi''(u) = 1$, $\varphi(0) = \varphi(1) = 0$) :
+\[
+  \int_0^1 g(u)\,du - \frac{g(0)+g(1)}{2} = -\int_0^1 \frac{u(1-u)}{2}\,g''(u)\,du.
+\]
+Comme $g''(u) = h^2 f''(x_k + uh)$, on obtient :
+\[
+  |e_k| \leq h \cdot h^2\,\norme{f''}\int_0^1 \frac{u(1-u)}{2}\,du = h^3\,\norme{f''}\cdot\frac{1}{12}.
+\]
+En sommant sur $k = 0, \ldots, n-1$ :
+\[
+  \abs{I(f) - T_n} \leq n\cdot\frac{h^3}{12}\,\norme{f''} = \frac{(b-a)^3}{12n^2}\,\norme{f''}.
+\]
+\end{proof}
+
+\begin{remarque}[Lien entre point milieu et trapèzes]
+On a les majorations :
+\[
+  \abs{I(f) - M_n} \leq \frac{(b-a)^3}{24n^2}\,\norme{f''}, \qquad
+  \abs{I(f) - T_n} \leq \frac{(b-a)^3}{12n^2}\,\norme{f''}.
+\]
+La constante pour le point milieu est exactement la moitié de celle des trapèzes. De plus, les erreurs sont de \textbf{signes opposés} : si $f'' > 0$ (fonction convexe), alors $T_n \geq I(f) \geq M_n$.
+\end{remarque}
+
+\begin{proposition}[Encadrement par convexité]
+Si $f$ est convexe sur $[a,b]$, alors pour tout $n \geq 1$ :
+\[
+  M_n \leq I(f) \leq T_n.
+\]
+Si $f$ est concave, les inégalités sont renversées.
+\end{proposition}
+
+\begin{proof}
+Par convexité, sur chaque sous-intervalle $[x_k, x_{k+1}]$, le graphe de $f$ est situé \textbf{au-dessous} de la corde (inégalité des trapèzes $\geq I$) et \textbf{au-dessus} de la tangente au point milieu (inégalité du point milieu $\leq I$). Plus précisément, pour tout $t \in [x_k, x_{k+1}]$ :
+\[
+  f(c_k) + f'(c_k)(t - c_k) \leq f(t) \leq \frac{x_{k+1}-t}{h}\,f(x_k) + \frac{t - x_k}{h}\,f(x_{k+1}).
+\]
+En intégrant sur $[x_k, x_{k+1}]$, on obtient l'encadrement voulu.
+\end{proof}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Méthode de Simpson}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Construction}
+
+L'idée est d'approcher $f$ sur chaque sous-intervalle par un \textbf{polynôme de degré~2} (parabole) passant par trois points.
+
+\begin{definition}[Formule de Simpson composée]
+On subdivise $[a,b]$ en $2n$ sous-intervalles de pas $h = \frac{b-a}{2n}$, avec $x_j = a + jh$ pour $j = 0, \ldots, 2n$. La formule de Simpson composée est :
+\[
+  S_n = \frac{h}{3}\left[f(x_0) + 4\sum_{\substack{j=1 \\ j\text{ impair}}}^{2n-1} f(x_j) + 2\sum_{\substack{j=2 \\ j\text{ pair}}}^{2n-2} f(x_j) + f(x_{2n})\right].
+\]
+\end{definition}
+
+\begin{proposition}[Formule de Simpson élémentaire]
+Sur un intervalle $[\alpha, \beta]$ avec $\gamma = \frac{\alpha+\beta}{2}$, la formule de Simpson élémentaire est :
+\[
+  \frac{\beta - \alpha}{6}\left[f(\alpha) + 4f(\gamma) + f(\beta)\right].
+\]
+Elle est exacte pour tout polynôme de degré $\leq 3$.
+\end{proposition}
+
+\begin{proof}[Preuve de l'exactitude pour les polynômes de degré $\leq 3$]
+Par linéarité, il suffit de vérifier pour la base $\{1, t, t^2, t^3\}$ sur $[-1, 1]$ (par changement de variable affine). On pose $h = 1$ :
+\begin{itemize}
+  \item $f(t) = 1$ : $\int_{-1}^1 1\,dt = 2$ et $\frac{2}{6}(1 + 4\cdot 1 + 1) = 2$. \checkmark
+  \item $f(t) = t$ : $\int_{-1}^1 t\,dt = 0$ et $\frac{2}{6}(-1 + 4\cdot 0 + 1) = 0$. \checkmark
+  \item $f(t) = t^2$ : $\int_{-1}^1 t^2\,dt = \frac{2}{3}$ et $\frac{2}{6}(1 + 4\cdot 0 + 1) = \frac{2}{3}$. \checkmark
+  \item $f(t) = t^3$ : $\int_{-1}^1 t^3\,dt = 0$ et $\frac{2}{6}(-1 + 4\cdot 0 + 1) = 0$. \checkmark
+\end{itemize}
+Simpson est donc exacte pour les polynômes de degré $\leq 3$, bien que fondée sur une interpolation de degré~2 seulement. Ce \og gain d'un degré\fg{} est un phénomène classique lié à la symétrie de la formule.
+\end{proof}
+
+\subsection{Relation avec les méthodes précédentes}
+
+\begin{proposition}[Formule de Cavalieri-Simpson]
+\[
+  S_n = \frac{2M_n + T_n}{3}.
+\]
+\end{proposition}
+
+\begin{proof}
+Notons $\tilde{h} = \frac{b-a}{n}$ le pas de la subdivision en $n$ sous-intervalles pour $T_n$ et $M_n$. Alors $h = \tilde{h}/2$. On vérifie que la combinaison $\frac{2M_n + T_n}{3}$ redonne exactement la formule de Simpson composée avec les poids $1/6$, $4/6$, $1/6$.
+\end{proof}
+
+\begin{remarque}
+Cette relation est très utile numériquement : on peut obtenir Simpson à partir de calculs déjà effectués pour les trapèzes et le point milieu, sans évaluation supplémentaire de~$f$.
+\end{remarque}
+
+\subsection{Estimation de l'erreur}
+
+\begin{theoreme}[Erreur de la méthode de Simpson]\label{thm:erreur_simpson}
+Si $f \in \mathcal{C}^4([a,b])$, alors :
+\[
+  \abs{I(f) - S_n} \leq \frac{(b-a)^5}{2880\,n^4}\,\norme{f^{(4)}} = O\!\left(\frac{1}{n^4}\right).
+\]
+\end{theoreme}
+
+\begin{proof}[Idée de la preuve]
+On développe $f$ par Taylor à l'ordre~4 autour du milieu $c_k$ de chaque sous-intervalle $[x_{2k}, x_{2k+2}]$. L'erreur de Simpson élémentaire sur $[x_{2k}, x_{2k+2}]$ vaut :
+\[
+  E_k = \int_{x_{2k}}^{x_{2k+2}} f(t)\,dt - \frac{\tilde{h}}{6}\big[f(x_{2k}) + 4f(c_k) + f(x_{2k+2})\big]
+\]
+avec $\tilde{h} = x_{2k+2} - x_{2k} = 2h$. Par calcul, les termes d'ordre 0, 1, 2 et 3 s'annulent (exactitude pour les polynômes de degré $\leq 3$), et il reste :
+\[
+  \abs{E_k} \leq \frac{\tilde{h}^5}{2880}\,\norme{f^{(4)}}.
+\]
+En sommant sur les $n$ sous-intervalles :
+\[
+  \abs{I(f) - S_n} \leq n \cdot \frac{\tilde{h}^5}{2880}\,\norme{f^{(4)}} = \frac{(b-a)^5}{2880\,n^4}\,\norme{f^{(4)}}.
+\]
+\end{proof}
+
+\begin{remarque}
+La convergence est d'ordre~4, ce qui signifie que doubler le nombre de points divise l'erreur par~16. Simpson est donc très efficace pour les fonctions suffisamment régulières.
+\end{remarque}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Tableau récapitulatif}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Méthode} & \textbf{Régularité requise} & \textbf{Ordre d'erreur} & \textbf{Constante} \\
+\midrule
+Rectangles (gauche/droite) & $\mathcal{C}^1$ & $O(1/n)$ & $\dfrac{(b-a)^2}{2}$ \\[6pt]
+Point milieu & $\mathcal{C}^2$ & $O(1/n^2)$ & $\dfrac{(b-a)^3}{24}$ \\[6pt]
+Trapèzes & $\mathcal{C}^2$ & $O(1/n^2)$ & $\dfrac{(b-a)^3}{12}$ \\[6pt]
+Simpson & $\mathcal{C}^4$ & $O(1/n^4)$ & $\dfrac{(b-a)^5}{2880}$ \\[4pt]
+\bottomrule
+\end{tabular}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Applications numériques}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Approximation de $\pi$}
+
+On utilise l'identité :
+\[
+  \int_0^1 \frac{4}{1+x^2}\,dx = \big[4\arctan(x)\big]_0^1 = 4\cdot\frac{\pi}{4} = \pi.
+\]
+
+\begin{exemple}[Comparaison des méthodes pour $n=10$]
+Avec $f(x) = \frac{4}{1+x^2}$, $a=0$, $b=1$, $n=10$ :
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Méthode} & \textbf{Valeur approchée} & \textbf{Erreur} \\
+\midrule
+Rectangles à gauche & $3{,}2399\ldots$ & $\sim 10^{-1}$ \\
+Trapèzes ($T_{10}$) & $3{,}1399\ldots$ & $\sim 2\times 10^{-3}$ \\
+Point milieu ($M_{10}$) & $3{,}1424\ldots$ & $\sim 8\times 10^{-4}$ \\
+Simpson ($S_{10}$) & $3{,}14159265\ldots$ & $\sim 5\times 10^{-8}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+On constate la supériorité spectaculaire de la méthode de Simpson.
+\end{exemple}
+
+\subsection{Calcul de l'intégrale de Gauss}
+
+\begin{exercice}
+Approcher $\displaystyle\int_0^1 e^{-x^2}\,dx$ par les méthodes des trapèzes et de Simpson avec $n = 5$.
+\end{exercice}
+
+\textbf{Solution.} Avec $f(x) = e^{-x^2}$, $h = 0{,}2$ :
+\[
+  T_5 = 0{,}2\left(\frac{e^0 + e^{-1}}{2} + e^{-0{,}04} + e^{-0{,}16} + e^{-0{,}36} + e^{-0{,}64}\right) \approx 0{,}7468.
+\]
+La valeur exacte est $\approx 0{,}7468241328\ldots$ (fonction d'erreur).
+
+\subsection{Vérification expérimentale de l'ordre de convergence}
+
+\begin{exercice}[Implémentation Python]
+Tracer $\log\abs{I - T_n}$ en fonction de $\log n$ et vérifier que la pente est environ $-2$.
+\end{exercice}
+
+\begin{lstlisting}[caption={Vérification de l'ordre de convergence}]
+import numpy as np
+import matplotlib.pyplot as plt
+
+def trapezes(f, a, b, n):
+    x = np.linspace(a, b, n+1)
+    h = (b - a) / n
+    return h * (f(x[0])/2 + np.sum(f(x[1:-1])) + f(x[-1])/2)
+
+def simpson(f, a, b, n):
+    x = np.linspace(a, b, 2*n+1)
+    h = (b - a) / (2*n)
+    return (h/3) * (f(x[0]) + 4*np.sum(f(x[1::2]))
+                    + 2*np.sum(f(x[2:-2:2])) + f(x[-1]))
+
+f = lambda x: 4 / (1 + x**2)
+I_exact = np.pi
+
+ns = [2**k for k in range(2, 12)]
+err_T = [abs(I_exact - trapezes(f, 0, 1, n)) for n in ns]
+err_S = [abs(I_exact - simpson(f, 0, 1, n)) for n in ns]
+
+plt.loglog(ns, err_T, 'o-', label='Trapezes (pente -2)')
+plt.loglog(ns, err_S, 's-', label='Simpson (pente -4)')
+plt.xlabel('n')
+plt.ylabel('|Erreur|')
+plt.legend()
+plt.grid(True)
+plt.title('Convergence des methodes numeriques')
+plt.show()
+\end{lstlisting}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Compléments et ouvertures}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Formule d'Euler--Maclaurin (pour l'entretien)}
+
+\begin{theoreme}[Formule d'Euler--Maclaurin simplifiée]
+Si $f \in \mathcal{C}^{2p}([a,b])$, alors :
+\[
+  T_n - I(f) = \sum_{j=1}^{p-1} \frac{B_{2j}}{(2j)!}\,h^{2j}\big[f^{(2j-1)}(b) - f^{(2j-1)}(a)\big] + O(h^{2p})
+\]
+où les $B_{2j}$ sont les nombres de Bernoulli ($B_2 = \frac{1}{6}$, $B_4 = -\frac{1}{30}$, \ldots).
+\end{theoreme}
+
+\begin{remarque}
+Cette formule montre que l'erreur des trapèzes admet un \textbf{développement asymptotique en puissances paires de $h$}. C'est la base de la méthode de \textbf{Romberg} (extrapolation de Richardson).
+\end{remarque}
+
+\subsection{Méthode de Romberg}
+
+L'idée est de combiner $T_n$ et $T_{2n}$ pour éliminer le terme d'erreur dominant :
+\[
+  R_n^{(1)} = \frac{4\,T_{2n} - T_n}{3} = S_n.
+\]
+En itérant ce procédé d'extrapolation, on obtient des approximations d'ordre de plus en plus élevé.
+
+\subsection{Méthodes de quadrature de Gauss}
+
+\begin{definition}
+Les \textbf{formules de Gauss-Legendre} choisissent les points d'évaluation $x_1, \ldots, x_m$ (non équidistants) et les poids $\omega_1, \ldots, \omega_m$ de sorte que :
+\[
+  \int_{-1}^1 f(x)\,dx \approx \sum_{i=1}^m \omega_i\,f(x_i)
+\]
+soit exacte pour tout polynôme de degré $\leq 2m-1$.
+\end{definition}
+
+\begin{remarque}
+Avec $m$ points, Gauss-Legendre atteint l'ordre $2m$ de précision (contre $m+1$ pour Newton-Cotes à $m$ points équidistants). C'est optimal au sens de la théorie de l'approximation.
+\end{remarque}
+
+\subsection{Intégration Monte-Carlo (ouverture)}
+
+Pour les intégrales en \textbf{grande dimension}, les méthodes déterministes deviennent inefficaces (malédiction de la dimension). La méthode de Monte-Carlo approche :
+\[
+  \int_{[0,1]^d} f(x)\,dx \approx \frac{1}{N}\sum_{i=1}^N f(X_i)
+\]
+où les $X_i$ sont des variables aléatoires uniformes sur $[0,1]^d$. L'erreur est en $O(1/\sqrt{N})$, \textbf{indépendamment de la dimension} $d$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Exercices d'entraînement}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{exercice}[Encadrement]
+Soit $f(x) = \frac{1}{1+x^2}$ sur $[0,1]$.
+\begin{enumerate}[label=\alph*)]
+  \item Montrer que $f$ est convexe sur $[0, 1/\sqrt{3}]$ et concave sur $[1/\sqrt{3}, 1]$.
+  \item En déduire un encadrement de $\int_0^1 f(x)\,dx = \frac{\pi}{4}$ par la méthode des trapèzes avec $n=1$.
+  \item Combien de sous-intervalles faut-il pour garantir une erreur $\leq 10^{-6}$ avec les trapèzes ?
+\end{enumerate}
+\end{exercice}
+
+\begin{exercice}[Calcul pratique]
+Calculer une valeur approchée de $\displaystyle\int_0^1 \frac{\sin x}{x}\,dx$ (on pose $f(0)=1$) par :
+\begin{enumerate}[label=\alph*)]
+  \item la méthode des trapèzes avec $n=4$,
+  \item la méthode de Simpson avec $n=2$.
+\end{enumerate}
+Comparer avec la valeur tabulée $\approx 0{,}94608$.
+\end{exercice}
+
+\begin{exercice}[Développement asymptotique]
+Soit $f \in \mathcal{C}^2([0,1])$. Montrer que :
+\[
+  \frac{1}{n}\sum_{k=1}^n f\!\left(\frac{k}{n}\right) = \int_0^1 f(x)\,dx + \frac{f(1)-f(0)}{2n} + O\!\left(\frac{1}{n^2}\right).
+\]
+En déduire un équivalent de $H_n - \ln n$ quand $n \to +\infty$ (constante d'Euler--Mascheroni).
+\end{exercice}
+
+\begin{exercice}[Implémentation et ordre de convergence]
+\begin{enumerate}[label=\alph*)]
+  \item Implémenter en Python les méthodes des trapèzes et de Simpson.
+  \item Pour $f(x) = e^{-x^2}$ sur $[0,1]$, tracer $\log|I - T_n|$ et $\log|I - S_n|$ en fonction de $\log n$.
+  \item Vérifier que les pentes sont respectivement $-2$ et $-4$.
+\end{enumerate}
+\end{exercice}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Conclusion}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Le calcul approché d'intégrales est un sujet riche qui mêle \textbf{analyse réelle} (théorèmes de Taylor, continuité uniforme), \textbf{algèbre polynomiale} (interpolation) et \textbf{algorithmique} (implémentation). Les points essentiels à retenir sont :
+
+\begin{enumerate}
+  \item La \textbf{construction} des méthodes par interpolation polynomiale locale.
+  \item Les \textbf{estimations d'erreur} rigoureuses, établies via les formules de Taylor.
+  \item La \textbf{hiérarchie des ordres} : rectangles ($O(1/n)$) $<$ trapèzes/point milieu ($O(1/n^2)$) $<$ Simpson ($O(1/n^4)$).
+  \item Les \textbf{applications numériques} concrètes montrant l'efficacité pratique.
+  \item Les \textbf{ouvertures} vers des méthodes plus avancées (Romberg, Gauss, Monte-Carlo).
+\end{enumerate}
+
+\vspace{1em}
+\begin{tcolorbox}[colback=green!5!white, colframe=green!50!black, title=Conseils pour l'oral]
+\begin{itemize}
+  \item \textbf{Preuves à développer au tableau :} erreur des trapèzes (Théorème~\ref{thm:erreur_trapezes}) et exactitude de Simpson pour degré $\leq 3$.
+  \item \textbf{Exemples numériques :} calcul de $\pi$ par $\int_0^1 \frac{4}{1+x^2}\,dx$.
+  \item \textbf{Dessin :} interprétation géométrique des trapèzes et du point milieu.
+  \item \textbf{Questions probables du jury :} \og Pourquoi le point milieu est-il meilleur que les trapèzes ?\fg{}, \og Peut-on atteindre un ordre supérieur à 4 ?\fg{}, \og Comment choisir $n$ en pratique ?\fg{}
+\end{itemize}
+\end{tcolorbox}
+
+\end{document}
